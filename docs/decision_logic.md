@@ -30,6 +30,8 @@
 ### ML Önerisi
 - Multi-class recommendation: `THROTTLE`, `WEIGHT`, `CONFIG_CHECK`
 - Basit arama: timeout düşsün, revenue loss minimize
+  - Amaç: `timeout_rate` düşüşü
+  - Kısıt: `revenue` kaybı minimum
 
 ### Bonus
 - Thompson Sampling ile throttle seviyelerini test et
@@ -41,3 +43,9 @@
 - Expected impact
 - Risk
 - Rollback condition
+
+## 5) Feedback Loop
+- Aksiyon uygulandıktan sonra **10 dk window** ölçülür
+- `success_score` hesaplanır (revenue + latency + fraud)
+- Sonuç `action_outcomes` tablosuna yazılır
+- Dataset’e yeni örnek eklenir, haftalık retrain pipeline beslenir

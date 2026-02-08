@@ -45,3 +45,41 @@
 4. Guardrail + ML katmanları aksiyon önerir
 5. Control plane aksiyonu uygular ve loglar
 6. UI ve Grafana üzerinden izlenir
+
+## Veritabanı Tasarımı (ClickHouse + Postgres)
+
+### ClickHouse (Time-series & Analytics)
+**`rtb_events_raw`**
+- `ts`, `request_id`, `bidder_id`, `geo`, `device`, `publisher`, `ad_format`
+- `bid_price`, `won` (bool), `revenue`, `timeout` (bool), `fraud_signal` (float)
+
+**`rtb_metrics_1m`**
+- `ts_minute`
+- `segment_key` (ör: `geo|device|publisher|format|bidder`)
+- `qps`, `bids`, `wins`, `win_rate`
+- `revenue`, `rpm`, `cpm`
+- `timeouts`, `timeout_rate`
+- `fraud_score_avg`, `fraud_spike_count`
+
+**`baseline_profiles`**
+- `segment_key`, `hour_of_day`, `day_of_week`
+- `expected_mean`, `expected_std` (win_rate, rpm, timeout_rate vb.)
+- Rolling quantiles: `p50`, `p90`, `p99`
+
+### Postgres (Control + Audit)
+**`config_rules`**
+- `rule_id`, `rule_type`, `segment_filter`, `params` (jsonb)
+- `enabled`, `version`
+
+**`actions`**
+- `action_id`, `ts`, `segment_key`
+- `action_type` (THROTTLE, WEIGHT, CONFIG_SUGGEST)
+- `proposed_value`, `applied_value`
+- `mode` (AUTO, APPROVED, MANUAL)
+- `status` (PROPOSED, APPLIED, ROLLED_BACK)
+- `expected_impact`, `risk_level`
+
+**`action_outcomes`**
+- `action_id`, `window_after_minutes`
+- `delta_revenue`, `delta_timeout_rate`, `delta_win_rate`
+- `success_score`
