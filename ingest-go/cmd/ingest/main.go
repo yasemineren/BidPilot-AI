@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"crypto/tls"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -21,20 +24,34 @@ type RtbEvent struct {
 
 func main() {
 	// 1. Bağlantı Ayarları
+	addrEnv := getenv("CLICKHOUSE_ADDR", "localhost:9000")
+	addrs := strings.Split(addrEnv, ",")
+	for i := range addrs {
+		addrs[i] = strings.TrimSpace(addrs[i])
+	}
+	useTLS := getenv("CLICKHOUSE_SECURE", "") == "true"
+	skipVerify := getenv("CLICKHOUSE_INSECURE_SKIP_VERIFY", "") == "true"
+
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{"localhost:9000"},
+		Addr: addrs,
 		Auth: clickhouse.Auth{
-			Database: "default",
-			Username: "default",
-			Password: "",
+			Database: getenv("CLICKHOUSE_DATABASE", "default"),
+			Username: getenv("CLICKHOUSE_USER", "default"),
+			Password: getenv("CLICKHOUSE_PASSWORD", ""),
 		},
+		TLS: func() *tls.Config {
+			if !useTLS {
+				return nil
+			}
+			return &tls.Config{InsecureSkipVerify: skipVerify}
+		}(),
 	})
 	if err != nil {
-		log.Fatal("❌ Bağlantı Kurulamadı:", err)
+		log.Fatal("❌ Bağlantı Kurulamadı (CLICKHOUSE_* env değişkenlerini kontrol et):", err)
 	}
 
 	if err := conn.Ping(context.Background()); err != nil {
-		log.Fatal("❌ ClickHouse Cevap Vermiyor:", err)
+		log.Fatal("❌ ClickHouse Cevap Vermiyor (şifre/host/port/tls kontrol et):", err)
 	}
 	fmt.Println("✅ ClickHouse Bağlantısı Başarılı! (Hazır)")
 
@@ -68,4 +85,11 @@ func main() {
 	})
 
 	log.Fatal(app.Listen(":3000"))
+}
+
+func getenv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
