@@ -1,29 +1,25 @@
 version: '3.8'
-
 services:
-  # Analitik Veritabanı (Hızlı Okuma/Yazma)
-  clickhouse:
+  bidpilot-clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: bidpilot-clickhouse
     ports:
-      - "8123:8123" # HTTP Portu (Sorgular için)
-      - "9000:9000" # Native Port (Go servisi için)
+      - "9000:9000"
+      - "8123:8123"
+    environment:
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=123
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
-    volumes:
-      - ./infra/clickhouse_data:/var/lib/clickhouse
 
-  # Yönetim Paneli Veritabanı (Ayarlar için)
-  postgres:
-    image: postgres:15-alpine
+  bidpilot-postgres:
+    image: postgres:15
     container_name: bidpilot-postgres
     environment:
-      POSTGRES_USER: admin
+      POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: bidpilot_control
+      POSTGRES_DB: bidpilot
     ports:
       - "5432:5432"
-    volumes:
-      - ./infra/postgres_data:/var/lib/postgresql/data

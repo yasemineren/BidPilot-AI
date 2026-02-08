@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"crypto/tls"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -23,73 +20,52 @@ type RtbEvent struct {
 }
 
 func main() {
-	// 1. Bağlantı Ayarları
-	addrEnv := getenv("CLICKHOUSE_ADDR", "localhost:9000")
-	addrs := strings.Split(addrEnv, ",")
-	for i := range addrs {
-		addrs[i] = strings.TrimSpace(addrs[i])
-	}
-	useTLS := getenv("CLICKHOUSE_SECURE", "") == "true"
-	skipVerify := getenv("CLICKHOUSE_INSECURE_SKIP_VERIFY", "") == "true"
-
+	// ŞİFREYİ "123" OLARAK AYARLADIK
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: addrs,
+		Addr: []string{"localhost:9000"},
 		Auth: clickhouse.Auth{
-			Database: getenv("CLICKHOUSE_DATABASE", "default"),
-			Username: getenv("CLICKHOUSE_USER", "default"),
-			Password: getenv("CLICKHOUSE_PASSWORD", ""),
+			Database: "default",
+			Username: "default",
+			Password: "123", // Şifremiz bu
 		},
-		TLS: func() *tls.Config {
-			if !useTLS {
-				return nil
-			}
-			return &tls.Config{InsecureSkipVerify: skipVerify}
-		}(),
 	})
 	if err != nil {
-		log.Fatal("❌ Bağlantı Kurulamadı (CLICKHOUSE_* env değişkenlerini kontrol et):", err)
+		log.Fatal("❌ Bağlantı Kurulamadı:", err)
 	}
 
-	if err := conn.Ping(context.Background()); err != nil {
-		log.Fatal("❌ ClickHouse Cevap Vermiyor (şifre/host/port/tls kontrol et):", err)
+	// Bağlantı testi
+	for i := 0; i < 5; i++ {
+		if err := conn.Ping(context.Background()); err == nil {
+			break
+		}
+		fmt.Println("⚠️ Veritabanı uyanıyor... (Bekleniyor)")
+		time.Sleep(3 * time.Second)
 	}
-	fmt.Println("✅ ClickHouse Bağlantısı Başarılı! (Hazır)")
 
-	// 2. Sunucu Başlat
+	fmt.Println("✅ ClickHouse Bağlantısı Başarılı! (Şifre: 123)")
+
 	app := fiber.New()
-
 	app.Post("/api/v1/event", func(c *fiber.Ctx) error {
 		event := new(RtbEvent)
 		if err := c.BodyParser(event); err != nil {
 			return c.Status(400).SendString("Bozuk JSON")
 		}
-
-		// 3. ANINDA YAZ (Bekleme yok)
+		
 		ctx := context.Background()
 		wonInt := uint8(0)
 		if event.Won { wonInt = 1 }
-
-		// Zaman formatını düzelt (ISO8601 -> DateTime)
 		t, _ := time.Parse(time.RFC3339, event.Timestamp)
 
-		query := `INSERT INTO rtb_events (event_id, ts, bidder_id, geo, bid_price, won) VALUES (?, ?, ?, ?, ?, ?)`
+		query := "INSERT INTO rtb_events (event_id, ts, bidder_id, geo, bid_price, won) VALUES (?, ?, ?, ?, ?, ?)"
 		err := conn.Exec(ctx, query, event.EventID, t, event.BidderID, event.Geo, event.BidPrice, wonInt)
 
 		if err != nil {
-			fmt.Println("❌ YAZMA HATASI:", err) // Hatayı ekrana bas
+			fmt.Println("❌ YAZMA HATASI:", err)
 			return c.Status(500).SendString(err.Error())
 		}
-
-		fmt.Println("💾 YAZILDI:", event.EventID) // Başarıyı ekrana bas
+		fmt.Println("💾 YAZILDI:", event.EventID)
 		return c.SendStatus(200)
 	})
 
 	log.Fatal(app.Listen(":3000"))
-}
-
-func getenv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
 }
