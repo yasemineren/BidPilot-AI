@@ -130,6 +130,15 @@ Detaylar: [docs/decision_logic.md](docs/decision_logic.md)
 
 ---
 
+## Feedback Loop (Outcome → Learning → Action)
+- Aksiyon uygulandıktan **10 dk sonrası** metrikler ölçülür
+- `success_score` üretilir (revenue, latency, fraud hedefleri birlikte)
+- Yeni örnek **dataset’e eklenir**, haftalık retrain pipeline beslenir
+
+Detaylı süreç: [docs/decision_logic.md](docs/decision_logic.md)
+
+---
+
 ## Demo Senaryoları (en az 4)
 1. **Latency/timeout incident** → throttle önerisi + recovery
 2. **Revenue drop** → config check önerisi (floor price mismatch)
@@ -154,6 +163,35 @@ Detaylı runbook: [docs/runbook.md](docs/runbook.md)
 - **Robust z-score + ML**: düşük yanlış-pozitif + explainability
 - **Throttle yerine config**: revenue kaybını minimize etme
 - **Semi-automated mod**: operatör onayıyla risk düşürme
+
+---
+
+## Production Kalitesi: Eksiği Olmasın Checklist
+### 1) API Tasarımı
+- **Decision API**: `POST /v1/decide`
+- **Control API**: `POST /v1/actions/apply`, `POST /v1/actions/rollback`, `GET /v1/actions/history`
+- **Metrics**: `GET /metrics`
+
+### 2) Güvenlik & Operasyon
+- Secrets: DB creds, API keys → **K8s Secret**
+- **RBAC**: Apply/Rollback endpoint sadece operator token ile
+- **Audit log**: action uygulayan kim, ne zaman?
+
+### 3) Testler
+- Unit: feature builder, anomaly scoring, action policy
+- Integration: ClickHouse write/read, Decision API schema
+- Load: k6 ile `/v1/decide` latency
+- Regression: 5 incident senaryosu, beklenen aksiyon doğru mu?
+
+### 4) CI/CD
+- GitHub Actions: lint + tests
+- Docker build + Trivy security scan
+- Helm chart validate
+
+### 5) Deploy
+- `helm/` chart ile tek komut kurulum
+- HPA: CPU + custom metric (QPS)
+- Canary rollout (%10 → %100)
 
 ---
 
