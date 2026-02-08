@@ -20,31 +20,21 @@ type RtbEvent struct {
 }
 
 func main() {
-	// ŞİFREYİ "123" OLARAK AYARLADIK
+	// Bağlantı ayarları (Localhost)
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{"localhost:9000"},
+		Addr: []string{"bidpilot-clickhouse:9000"},
 		Auth: clickhouse.Auth{
 			Database: "default",
 			Username: "default",
-			Password: "123", // Şifremiz bu
+			Password: "123",
 		},
 	})
 	if err != nil {
-		log.Fatal("❌ Bağlantı Kurulamadı:", err)
+		log.Fatal("❌ Bağlantı hatası:", err)
 	}
-
-	// Bağlantı testi
-	for i := 0; i < 5; i++ {
-		if err := conn.Ping(context.Background()); err == nil {
-			break
-		}
-		fmt.Println("⚠️ Veritabanı uyanıyor... (Bekleniyor)")
-		time.Sleep(3 * time.Second)
-	}
-
-	fmt.Println("✅ ClickHouse Bağlantısı Başarılı! (Şifre: 123)")
 
 	app := fiber.New()
+
 	app.Post("/api/v1/event", func(c *fiber.Ctx) error {
 		event := new(RtbEvent)
 		if err := c.BodyParser(event); err != nil {
@@ -54,16 +44,20 @@ func main() {
 		ctx := context.Background()
 		wonInt := uint8(0)
 		if event.Won { wonInt = 1 }
-		t, _ := time.Parse(time.RFC3339, event.Timestamp)
+
+		// --- KRİTİK NOKTA: ŞU ANKİ ZAMAN ---
+		t := time.Now() 
+		// -----------------------------------
+
+		// İSPİYONCU: Terminale tarihi yazdırıyoruz
+		fmt.Println("🕒 VERİTABANINA GİDEN TARİH:", t.Format("2006-01-02 15:04:05"))
 
 		query := "INSERT INTO rtb_events (event_id, ts, bidder_id, geo, bid_price, won) VALUES (?, ?, ?, ?, ?, ?)"
 		err := conn.Exec(ctx, query, event.EventID, t, event.BidderID, event.Geo, event.BidPrice, wonInt)
 
 		if err != nil {
 			fmt.Println("❌ YAZMA HATASI:", err)
-			return c.Status(500).SendString(err.Error())
 		}
-		fmt.Println("💾 YAZILDI:", event.EventID)
 		return c.SendStatus(200)
 	})
 

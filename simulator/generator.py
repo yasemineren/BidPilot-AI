@@ -46,6 +46,6 @@ if __name__ == "__main__":
                 print(f"⚠️ Connection Error: {e}")
                 print("   (Go servisi çalışıyor mu?)")
 
-            time.sleep(1) # Saniyede 1 tane atalım, görelim
+            time.sleep(0.01)
     except KeyboardInterrupt:
         print("\n🛑 Stopped.")
