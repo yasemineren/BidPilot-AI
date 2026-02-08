@@ -21,13 +21,17 @@ Kontrol listesi:
 1. **ClickHouse Cloud** kullanıyorsan servis ayarlarından şifreyi doğrula ve bağlantı string’ini güncelle.
 2. **Self-hosted** kurulumda `default` kullanıcısının şifresini `/etc/clickhouse-server/users.d/default-password.xml`
    dosyasından kontrol et (dosyayı silmek şifreyi sıfırlar).
-3. Uygulama tarafında **env/config** güncellemesi yap:
+3. **Docker Compose** ile ayağa kalktıysa bu repodaki ClickHouse servisi varsayılan olarak **şifresiz** gelir;
+   `default` kullanıcısı için `CLICKHOUSE_PASSWORD` boş bırakılmalıdır.
+4. Uygulama tarafında **env/config** güncellemesi yap:
    - `CLICKHOUSE_ADDR` (ör: `localhost:9000` veya `host:9440`)
    - `CLICKHOUSE_USER`
    - `CLICKHOUSE_PASSWORD`
    - `CLICKHOUSE_DATABASE` (opsiyonel, varsayılan `default`)
    - `CLICKHOUSE_SECURE=true` (TLS gerekiyorsa)
    - `CLICKHOUSE_INSECURE_SKIP_VERIFY=true` (sadece lokal test)
+5. **Go ingest servisinde** `go.mod` bulunduğu klasörden çalıştır (ör: `ingest-go/`):
+   - `go -C /workspaces/BidPilot-AI/ingest-go run cmd/ingest/main.go`
 
 Amaç: yanlış şifre yüzünden ClickHouse bağlantısının düşmesini hızlıca ayırt etmek.
 
