@@ -1,0 +1,33 @@
+columns substreams version: 1
+11 columns:
+3 substreams for column `hostname`:
+	hostname.dict_prefix
+	hostname.dict
+	hostname
+1 substreams for column `event_date`:
+	event_date
+1 substreams for column `event_time`:
+	event_time
+1 substreams for column `code`:
+	code
+3 substreams for column `error`:
+	error.dict_prefix
+	error.dict
+	error
+1 substreams for column `value`:
+	value
+2 substreams for column `remote`:
+	remote.sparse.idx
+	remote
+1 substreams for column `last_error_time`:
+	last_error_time
+2 substreams for column `last_error_message`:
+	last_error_message.size
+	last_error_message
+3 substreams for column `last_error_query_id`:
+	last_error_query_id.sparse.idx
+	last_error_query_id.size
+	last_error_query_id
+2 substreams for column `last_error_trace`:
+	last_error_trace.size0
+	last_error_trace
